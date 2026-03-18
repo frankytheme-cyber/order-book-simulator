@@ -86,6 +86,64 @@ export default function Page() {
 
       {/* Info modal */}
       {showInfo && <InfoPanel isDark={isDark} onClose={() => setShowInfo(false)} />}
+
+      {/* SEO / GEO content — visible below the fold */}
+      <section
+        aria-label="About this tool"
+        className={`border-t px-6 py-10 text-sm leading-relaxed ${d ? 'border-zinc-800 text-zinc-400' : 'border-zinc-200 text-zinc-600'}`}
+      >
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div>
+            <h2 className={`text-base font-semibold mb-2 ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>
+              What is an Order Book Simulator?
+            </h2>
+            <p>
+              An <strong>order book</strong> is the core mechanism of any financial exchange — stock, crypto, or futures.
+              It aggregates all open <strong>limit orders</strong> for a trading pair, sorted by price, showing the full
+              supply and demand at any moment. This simulator reproduces that mechanism in real time, directly in your browser,
+              with no account or installation required.
+            </p>
+          </div>
+
+          <div>
+            <h2 className={`text-base font-semibold mb-2 ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>
+              How does Price/Time Priority matching work?
+            </h2>
+            <p>
+              Orders are matched using <strong>Price/Time Priority</strong> (also called FIFO matching): the best-priced
+              order is always matched first. When two orders share the same price, the one submitted earliest takes precedence.
+              This is the standard algorithm used by most regulated exchanges worldwide, including NASDAQ, NYSE, and major
+              crypto platforms like Binance and Coinbase.
+            </p>
+          </div>
+
+          <div>
+            <h2 className={`text-base font-semibold mb-2 ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>
+              Features
+            </h2>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Live order book with real-time bid/ask updates</li>
+              <li>Configurable simulation speed</li>
+              <li>Manual limit and market order submission</li>
+              <li>Trade history with execution price and quantity</li>
+              <li>Bid/ask spread and last price tracking</li>
+              <li>Dark and light UI theme</li>
+              <li>No signup, no install — runs entirely in the browser</li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 className={`text-base font-semibold mb-2 ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>
+              Who is this for?
+            </h2>
+            <p>
+              Ideal for <strong>finance students</strong>, <strong>algorithmic traders</strong>, developers building
+              trading systems, and anyone curious about <strong>market microstructure</strong>. Use it to understand
+              how spreads form, how liquidity depth works, and how orders get executed in a real exchange environment.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

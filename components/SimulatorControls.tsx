@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Play, Pause, RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Pause, RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap, CheckCircle } from 'lucide-react';
 import { SimulatorState } from '@/hooks/useSimulator';
 import { Order } from '@/lib/engine';
 import Tooltip from './Tooltip';
@@ -39,9 +39,17 @@ export default function SimulatorControls({
   const [limitSide, setLimitSide] = useState<Side>('buy');
   const [price, setPrice]         = useState('');
   const [quantity, setQuantity]   = useState('');
+  const [toast, setToast]         = useState<string | null>(null);
 
   const d = isDark;
   const spread = bids[0] && asks[0] ? (asks[0].price - bids[0].price).toFixed(2) : '—';
+
+  // Auto-dismiss toast after 2.5 s
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Market order estimate
   const mktQty    = parseInt(quantity) || 0;
@@ -53,6 +61,7 @@ export default function SimulatorControls({
     const q = parseInt(quantity);
     if (!p || !q || p <= 0 || q <= 0) return;
     addManualOrder(p, q, limitSide);
+    setToast(`Ordine ${limitSide === 'buy' ? 'Buy' : 'Sell'} Limit inserito — ${q} @ ${p.toFixed(2)}`);
     setPrice(''); setQuantity('');
   };
 
@@ -60,15 +69,16 @@ export default function SimulatorControls({
     const q = parseInt(quantity);
     if (!q || q <= 0) return;
     addMarketOrder(side, q);
+    setToast(`Ordine ${side === 'buy' ? 'Buy' : 'Sell'} Market inviato — Qtà ${q}`);
     setQuantity('');
   };
 
   // ── style shortcuts ──
   const divider  = d ? 'border-zinc-800'  : 'border-zinc-200';
   const muted    = d ? 'text-zinc-500'    : 'text-zinc-500';
-  const inputCls = `flex-1 rounded-lg px-3 py-1.5 text-xs font-medium border focus:outline-none focus:ring-1 tabular-nums transition-colors
-    ${d ? 'bg-zinc-950 border-zinc-700 text-white placeholder-zinc-600 focus:border-zinc-500 focus:ring-zinc-700'
-        : 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:ring-zinc-300'}`;
+  const inputCls = `w-full rounded-lg px-3 py-2.5 text-sm font-medium border-2 focus:outline-none focus:ring-2 tabular-nums transition-colors
+    ${d ? 'bg-zinc-900 border-zinc-600 text-white placeholder-zinc-500 focus:border-emerald-500 focus:ring-emerald-500/20'
+        : 'bg-white border-zinc-400 text-zinc-900 placeholder-zinc-400 focus:border-emerald-500 focus:ring-emerald-500/20'}`;
 
   const tabActive   = (on: boolean, color: 'emerald' | 'amber') => on
     ? color === 'emerald'
@@ -79,6 +89,15 @@ export default function SimulatorControls({
 
   return (
     <div className={`rounded-lg border p-4 space-y-4 transition-colors duration-300 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
+
+      {/* ── Toast notification ── */}
+      {toast && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border animate-pulse-once
+          ${d ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-emerald-50 border-emerald-400 text-emerald-700'}`}>
+          <CheckCircle size={15} />
+          {toast}
+        </div>
+      )}
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-3 gap-3">
@@ -209,14 +228,14 @@ export default function SimulatorControls({
 
               {/* Price + Qty inputs */}
               <div className="flex gap-3">
-                <div className="flex items-center gap-2 flex-1">
-                  <label className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${muted}`}>Prezzo</label>
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <label className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>Prezzo</label>
                   <input type="number" value={price} onChange={(e) => setPrice(e.target.value)}
                     placeholder={bids[0] ? bids[0].price.toFixed(2) : '0.00'} step="0.01"
                     className={inputCls} />
                 </div>
-                <div className="flex items-center gap-2 flex-1">
-                  <label className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${muted}`}>Qtà</label>
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <label className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>Quantità</label>
                   <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)}
                     placeholder="100" step="1" min="1"
                     className={inputCls} />
@@ -240,12 +259,14 @@ export default function SimulatorControls({
           {/* ── MARKET form ── */}
           {orderType === 'market' && (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <label className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${muted}`}>Qtà</label>
+              <div className="flex flex-col gap-1.5">
+                <label className={`text-xs font-bold uppercase tracking-widest flex items-center gap-1 ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  Quantità
+                  <Tooltip isDark={isDark} content="L'ordine a mercato consuma la liquidità esistente partendo dal miglior prezzo disponibile." side="top" />
+                </label>
                 <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)}
                   placeholder="100" step="1" min="1"
                   className={inputCls} />
-                <Tooltip isDark={isDark} content="L'ordine a mercato consuma la liquidità esistente partendo dal miglior prezzo disponibile." side="top" />
               </div>
 
               {/* Estimate preview */}
