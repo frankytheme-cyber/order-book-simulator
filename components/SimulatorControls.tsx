@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Play, Pause, RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Play, Pause, RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap } from 'lucide-react';
 import { SimulatorState } from '@/hooks/useSimulator';
 import { Order } from '@/lib/engine';
 import Tooltip from './Tooltip';
@@ -11,7 +11,7 @@ type Props = Pick<
   | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice'
   | 'addManualOrder' | 'addMarketOrder' | 'seedBook' | 'reset'
   | 'trades' | 'bids' | 'asks'
-> & { isDark: boolean };
+> & { isDark: boolean; onToast?: (msg: string) => void };
 
 type OrderType = 'limit' | 'market';
 type Side = 'buy' | 'sell';
@@ -33,23 +33,15 @@ function estimateMarket(book: Order[], qty: number) {
 export default function SimulatorControls({
   isAuto, setIsAuto, speed, setSpeed, lastPrice,
   addManualOrder, addMarketOrder, seedBook, reset,
-  trades, bids, asks, isDark,
+  trades, bids, asks, isDark, onToast,
 }: Props) {
   const [orderType, setOrderType] = useState<OrderType>('limit');
   const [limitSide, setLimitSide] = useState<Side>('buy');
   const [price, setPrice]         = useState('');
   const [quantity, setQuantity]   = useState('');
-  const [toast, setToast]         = useState<string | null>(null);
 
   const d = isDark;
   const spread = bids[0] && asks[0] ? (asks[0].price - bids[0].price).toFixed(2) : '—';
-
-  // Auto-dismiss toast after 2.5 s
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2500);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   // Market order estimate
   const mktQty    = parseInt(quantity) || 0;
@@ -61,7 +53,7 @@ export default function SimulatorControls({
     const q = parseInt(quantity);
     if (!p || !q || p <= 0 || q <= 0) return;
     addManualOrder(p, q, limitSide);
-    setToast(`Ordine ${limitSide === 'buy' ? 'Buy' : 'Sell'} Limit inserito — ${q} @ ${p.toFixed(2)}`);
+    onToast?.(`Ordine ${limitSide === 'buy' ? 'Buy' : 'Sell'} Limit inserito — ${q} @ ${p.toFixed(2)}`);
     setPrice(''); setQuantity('');
   };
 
@@ -69,7 +61,7 @@ export default function SimulatorControls({
     const q = parseInt(quantity);
     if (!q || q <= 0) return;
     addMarketOrder(side, q);
-    setToast(`Ordine ${side === 'buy' ? 'Buy' : 'Sell'} Market inviato — Qtà ${q}`);
+    onToast?.(`Ordine ${side === 'buy' ? 'Buy' : 'Sell'} Market inviato — Qtà ${q}`);
     setQuantity('');
   };
 
@@ -89,15 +81,6 @@ export default function SimulatorControls({
 
   return (
     <div className={`rounded-lg border p-4 space-y-4 transition-colors duration-300 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
-
-      {/* ── Toast notification ── */}
-      {toast && (
-        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border animate-pulse-once
-          ${d ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-emerald-50 border-emerald-400 text-emerald-700'}`}>
-          <CheckCircle size={15} />
-          {toast}
-        </div>
-      )}
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-3 gap-3">
