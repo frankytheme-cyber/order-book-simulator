@@ -41,7 +41,7 @@ export default function OrderBookView({ bids, asks, isDark }: Props) {
   const emptyMsg = `px-3 py-8 text-center text-xs ${d ? 'text-zinc-600' : 'text-zinc-400'}`;
 
   return (
-    <div className={`rounded-lg overflow-hidden flex flex-col border transition-colors duration-300 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
+    <div className={`rounded-lg overflow-hidden flex flex-col border transition-colors duration-300 h-120 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
 
       {/* Header */}
       <div className={`px-4 py-2.5 border-b flex items-center justify-between ${divider}`}>

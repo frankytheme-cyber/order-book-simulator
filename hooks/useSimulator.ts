@@ -24,14 +24,41 @@ export function useSimulator(): SimulatorState {
   const [bids, setBids] = useState<Order[]>([]);
   const [asks, setAsks] = useState<Order[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [isAuto, setIsAuto] = useState(false);
+  const [isAuto, setIsAuto] = useState(true);
   const [speed, setSpeed] = useState(500);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
+  const seeded = useRef(false);
 
-  // Initialize engine client-side only
+  // Initialize engine client-side only + seed on first mount
   useEffect(() => {
     if (engineRef.current === null) {
       engineRef.current = new Engine();
+    }
+    if (!seeded.current) {
+      seeded.current = true;
+      const engine = engineRef.current;
+      const base = 100;
+      const now = Date.now();
+      const LEVELS = 12;
+      const STEP = 0.10;
+      for (let i = 1; i <= LEVELS; i++) {
+        engine.addOrder({
+          id: crypto.randomUUID(),
+          side: 'buy',
+          price: parseFloat((base - i * STEP).toFixed(2)),
+          quantity: Math.floor(Math.random() * 180) + 20,
+          timestamp: now + i,
+        });
+        engine.addOrder({
+          id: crypto.randomUUID(),
+          side: 'sell',
+          price: parseFloat((base + i * STEP).toFixed(2)),
+          quantity: Math.floor(Math.random() * 180) + 20,
+          timestamp: now + 100 + i,
+        });
+      }
+      setBids([...engine.bids]);
+      setAsks([...engine.asks]);
     }
   }, []);
 

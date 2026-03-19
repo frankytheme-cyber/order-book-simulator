@@ -80,7 +80,7 @@ export default function SimulatorControls({
          : 'bg-zinc-100 text-zinc-500 border-zinc-300 hover:bg-zinc-200 hover:text-zinc-700');
 
   return (
-    <div className={`rounded-lg border p-4 space-y-4 transition-colors duration-300 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
+    <div className={`rounded-lg border p-4 space-y-4 transition-colors duration-300 min-h-[340px] ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-3 gap-3">
