@@ -29,12 +29,12 @@ export class Engine {
       this.asks.sort((a, b) => a.price - b.price || a.timestamp - b.timestamp);
     }
 
-    const newTrades = this.matchOrders();
+    const newTrades = this.matchOrders(order.side);
     this.trades.push(...newTrades);
     return newTrades;
   }
 
-  private matchOrders(): Trade[] {
+  private matchOrders(aggressorSide: 'buy' | 'sell'): Trade[] {
     const result: Trade[] = [];
 
     while (
@@ -45,7 +45,8 @@ export class Engine {
       const bid = this.bids[0];
       const ask = this.asks[0];
       const tradeQty = Math.min(bid.quantity, ask.quantity);
-      const tradePrice = ask.price; // maker (resting ask) price
+      // Trade executes at the resting (maker) order's price
+      const tradePrice = aggressorSide === 'buy' ? ask.price : bid.price;
 
       const trade: Trade = {
         id: crypto.randomUUID(),
@@ -106,5 +107,16 @@ export class Engine {
 
   getLastPrice(): number | null {
     return this.trades.at(-1)?.price ?? null;
+  }
+
+  getVWAP(): number | null {
+    if (this.trades.length === 0) return null;
+    let sumPQ = 0;
+    let sumQ = 0;
+    for (const t of this.trades) {
+      sumPQ += t.price * t.quantity;
+      sumQ += t.quantity;
+    }
+    return sumQ === 0 ? null : sumPQ / sumQ;
   }
 }

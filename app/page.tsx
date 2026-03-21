@@ -143,6 +143,7 @@ export default function Page() {
           speed={simulator.speed}
           setSpeed={simulator.setSpeed}
           lastPrice={simulator.lastPrice}
+          vwap={simulator.vwap}
           addManualOrder={simulator.addManualOrder}
           addMarketOrder={simulator.addMarketOrder}
           seedBook={simulator.seedBook}

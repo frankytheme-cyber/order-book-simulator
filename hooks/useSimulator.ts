@@ -12,6 +12,7 @@ export interface SimulatorState {
   speed: number;
   setSpeed: (v: number) => void;
   lastPrice: number | null;
+  vwap: number | null;
   addManualOrder: (price: number, quantity: number, side: 'buy' | 'sell') => void;
   addMarketOrder: (side: 'buy' | 'sell', quantity: number) => void;
   seedBook: () => void;
@@ -27,6 +28,7 @@ export function useSimulator(): SimulatorState {
   const [isAuto, setIsAuto] = useState(true);
   const [speed, setSpeed] = useState(500);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
+  const [vwap, setVwap] = useState<number | null>(null);
   const seeded = useRef(false);
 
   // Initialize engine client-side only + seed on first mount
@@ -67,6 +69,7 @@ export function useSimulator(): SimulatorState {
     setAsks([...engine.asks]);
     setTrades([...engine.trades]);
     setLastPrice(engine.getLastPrice());
+    setVwap(engine.getVWAP());
   }, []);
 
   // Auto-generate orders
@@ -163,6 +166,7 @@ export function useSimulator(): SimulatorState {
     setAsks([]);
     setTrades([]);
     setLastPrice(null);
+    setVwap(null);
   }, []);
 
   return {
@@ -174,6 +178,7 @@ export function useSimulator(): SimulatorState {
     speed,
     setSpeed,
     lastPrice,
+    vwap,
     addManualOrder,
     addMarketOrder,
     seedBook,

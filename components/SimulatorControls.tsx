@@ -8,7 +8,7 @@ import Tooltip from './Tooltip';
 
 type Props = Pick<
   SimulatorState,
-  | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice'
+  | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice' | 'vwap'
   | 'addManualOrder' | 'addMarketOrder' | 'seedBook' | 'reset'
   | 'trades' | 'bids' | 'asks'
 > & { isDark: boolean; onToast?: (msg: string) => void };
@@ -31,7 +31,7 @@ function estimateMarket(book: Order[], qty: number) {
 }
 
 export default function SimulatorControls({
-  isAuto, setIsAuto, speed, setSpeed, lastPrice,
+  isAuto, setIsAuto, speed, setSpeed, lastPrice, vwap,
   addManualOrder, addMarketOrder, seedBook, reset,
   trades, bids, asks, isDark, onToast,
 }: Props) {
@@ -83,10 +83,12 @@ export default function SimulatorControls({
     <div className={`rounded-lg border p-4 space-y-4 transition-colors duration-300 min-h-[340px] ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {[
           { label: 'Last Price',   value: lastPrice !== null ? lastPrice.toFixed(2) : '—',
             tip: 'Prezzo dell\'ultimo trade eseguito nel motore di matching.' },
+          { label: 'VWAP',         value: vwap !== null ? vwap.toFixed(2) : '—',
+            tip: 'Volume Weighted Average Price — prezzo medio ponderato per il volume di tutti i trade della sessione.' },
           { label: 'Spread',       value: spread,
             tip: 'Best Ask − Best Bid. Costo implicito di un ordine a mercato.' },
           { label: 'Total Trades', value: String(trades.length),
