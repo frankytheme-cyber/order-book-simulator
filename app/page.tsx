@@ -240,7 +240,16 @@ export default function Page() {
       {/* ── Footer ── */}
       <footer className={`border-t px-6 py-5 text-center ${d ? 'border-zinc-800' : 'border-zinc-200'}`}>
         <p className={`text-xs ${d ? 'text-zinc-600' : 'text-zinc-400'}`}>
-          &copy; {new Date().getFullYear()} Simone Puliti &middot; Order Book Simulator &middot; Tutti i diritti riservati
+          &copy; {new Date().getFullYear()}{' '}
+          <a
+            href="https://simonepuliti.dev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`underline underline-offset-2 transition-colors ${d ? 'hover:text-zinc-300' : 'hover:text-zinc-700'}`}
+          >
+            Simone Puliti
+          </a>
+          {' '}&middot; Order Book Simulator &middot; Tutti i diritti riservati
         </p>
       </footer>
 
