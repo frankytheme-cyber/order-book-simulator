@@ -12,6 +12,7 @@ export interface Trade {
   quantity: number;
   buyOrderId: string;
   sellOrderId: string;
+  aggressor: 'buy' | 'sell';
   timestamp: number;
 }
 
@@ -34,6 +35,14 @@ export class Engine {
     return newTrades;
   }
 
+  cancelOrder(id: string): boolean {
+    const bidIdx = this.bids.findIndex((o) => o.id === id);
+    if (bidIdx !== -1) { this.bids.splice(bidIdx, 1); return true; }
+    const askIdx = this.asks.findIndex((o) => o.id === id);
+    if (askIdx !== -1) { this.asks.splice(askIdx, 1); return true; }
+    return false;
+  }
+
   private matchOrders(aggressorSide: 'buy' | 'sell'): Trade[] {
     const result: Trade[] = [];
 
@@ -45,7 +54,6 @@ export class Engine {
       const bid = this.bids[0];
       const ask = this.asks[0];
       const tradeQty = Math.min(bid.quantity, ask.quantity);
-      // Trade executes at the resting (maker) order's price
       const tradePrice = aggressorSide === 'buy' ? ask.price : bid.price;
 
       const trade: Trade = {
@@ -54,6 +62,7 @@ export class Engine {
         quantity: tradeQty,
         buyOrderId: bid.id,
         sellOrderId: ask.id,
+        aggressor: aggressorSide,
         timestamp: Date.now(),
       };
 
@@ -83,6 +92,7 @@ export class Engine {
         quantity: tradeQty,
         buyOrderId: side === 'buy' ? 'market' : resting.id,
         sellOrderId: side === 'sell' ? 'market' : resting.id,
+        aggressor: side,
         timestamp: Date.now(),
       };
       resting.quantity -= tradeQty;
@@ -118,5 +128,14 @@ export class Engine {
       sumQ += t.quantity;
     }
     return sumQ === 0 ? null : sumPQ / sumQ;
+  }
+
+  getImbalance(): number | null {
+    if (this.bids.length === 0 && this.asks.length === 0) return null;
+    const bidVol = this.bids.reduce((s, o) => s + o.quantity, 0);
+    const askVol = this.asks.reduce((s, o) => s + o.quantity, 0);
+    const total = bidVol + askVol;
+    if (total === 0) return null;
+    return bidVol / total; // 0 = full sell pressure, 1 = full buy pressure, 0.5 = balanced
   }
 }

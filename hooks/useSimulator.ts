@@ -13,10 +13,44 @@ export interface SimulatorState {
   setSpeed: (v: number) => void;
   lastPrice: number | null;
   vwap: number | null;
+  imbalance: number | null;
   addManualOrder: (price: number, quantity: number, side: 'buy' | 'sell') => void;
   addMarketOrder: (side: 'buy' | 'sell', quantity: number) => void;
+  cancelOrder: (id: string) => void;
   seedBook: () => void;
   reset: () => void;
+}
+
+// Box-Muller transform: standard normal sample
+function randn(): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+const LEVELS = 12;
+const STEP = 0.10;
+
+function seedEngine(engine: Engine) {
+  const base = engine.getMidPrice() ?? engine.getLastPrice() ?? 100;
+  const now = Date.now();
+  for (let i = 1; i <= LEVELS; i++) {
+    engine.addOrder({
+      id: crypto.randomUUID(),
+      side: 'buy',
+      price: parseFloat((base - i * STEP).toFixed(2)),
+      quantity: Math.floor(Math.random() * 180) + 20,
+      timestamp: now + i,
+    });
+    engine.addOrder({
+      id: crypto.randomUUID(),
+      side: 'sell',
+      price: parseFloat((base + i * STEP).toFixed(2)),
+      quantity: Math.floor(Math.random() * 180) + 20,
+      timestamp: now + 100 + i,
+    });
+  }
 }
 
 export function useSimulator(): SimulatorState {
@@ -29,9 +63,10 @@ export function useSimulator(): SimulatorState {
   const [speed, setSpeed] = useState(500);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
   const [vwap, setVwap] = useState<number | null>(null);
+  const [imbalance, setImbalance] = useState<number | null>(null);
   const seeded = useRef(false);
 
-  // Initialize engine client-side only + seed on first mount
+  // Initialize engine + seed on first mount
   useEffect(() => {
     if (engineRef.current === null) {
       engineRef.current = new Engine();
@@ -39,26 +74,7 @@ export function useSimulator(): SimulatorState {
     if (!seeded.current) {
       seeded.current = true;
       const engine = engineRef.current;
-      const base = 100;
-      const now = Date.now();
-      const LEVELS = 12;
-      const STEP = 0.10;
-      for (let i = 1; i <= LEVELS; i++) {
-        engine.addOrder({
-          id: crypto.randomUUID(),
-          side: 'buy',
-          price: parseFloat((base - i * STEP).toFixed(2)),
-          quantity: Math.floor(Math.random() * 180) + 20,
-          timestamp: now + i,
-        });
-        engine.addOrder({
-          id: crypto.randomUUID(),
-          side: 'sell',
-          price: parseFloat((base + i * STEP).toFixed(2)),
-          quantity: Math.floor(Math.random() * 180) + 20,
-          timestamp: now + 100 + i,
-        });
-      }
+      seedEngine(engine);
       setBids([...engine.bids]);
       setAsks([...engine.asks]);
     }
@@ -70,6 +86,7 @@ export function useSimulator(): SimulatorState {
     setTrades([...engine.trades]);
     setLastPrice(engine.getLastPrice());
     setVwap(engine.getVWAP());
+    setImbalance(engine.getImbalance());
   }, []);
 
   // Auto-generate orders
@@ -80,22 +97,37 @@ export function useSimulator(): SimulatorState {
       const engine = engineRef.current;
       if (!engine) return;
 
+      // Auto re-seed if book is too thin (< 3 levels on either side)
+      if (engine.bids.length < 3 || engine.asks.length < 3) {
+        seedEngine(engine);
+      }
+
       const ref = engine.getMidPrice() ?? engine.getLastPrice() ?? 100;
-      const deviation = ref * 0.005;
-      const rawPrice = ref + (Math.random() * 2 - 1) * deviation;
-      const price = parseFloat(rawPrice.toFixed(2));
-      const quantity = Math.floor(Math.random() * 100) + 1;
-      const side: 'buy' | 'sell' = Math.random() > 0.5 ? 'buy' : 'sell';
 
-      const order: Order = {
-        id: crypto.randomUUID(),
-        side,
-        price,
-        quantity,
-        timestamp: Date.now(),
-      };
+      // 20% chance of market order
+      if (Math.random() < 0.20) {
+        const side: 'buy' | 'sell' = Math.random() > 0.5 ? 'buy' : 'sell';
+        const quantity = Math.floor(Math.random() * 60) + 1;
+        engine.addMarketOrder(side, quantity);
+      } else {
+        // Log-normal price deviation: realistic skew
+        const sigma = 0.003;
+        const drift = randn() * sigma * ref;
+        const rawPrice = ref + drift;
+        const price = Math.max(0.01, parseFloat(rawPrice.toFixed(2)));
+        const quantity = Math.floor(Math.random() * 150) + 1;
+        const side: 'buy' | 'sell' = Math.random() > 0.5 ? 'buy' : 'sell';
 
-      engine.addOrder(order);
+        const order: Order = {
+          id: crypto.randomUUID(),
+          side,
+          price,
+          quantity,
+          timestamp: Date.now(),
+        };
+        engine.addOrder(order);
+      }
+
       syncState(engine);
     }, speed);
 
@@ -106,7 +138,6 @@ export function useSimulator(): SimulatorState {
     (price: number, quantity: number, side: 'buy' | 'sell') => {
       const engine = engineRef.current;
       if (!engine) return;
-
       const order: Order = {
         id: crypto.randomUUID(),
         side,
@@ -114,7 +145,6 @@ export function useSimulator(): SimulatorState {
         quantity,
         timestamp: Date.now(),
       };
-
       engine.addOrder(order);
       syncState(engine);
     },
@@ -131,32 +161,20 @@ export function useSimulator(): SimulatorState {
     [syncState]
   );
 
+  const cancelOrder = useCallback(
+    (id: string) => {
+      const engine = engineRef.current;
+      if (!engine) return;
+      engine.cancelOrder(id);
+      syncState(engine);
+    },
+    [syncState]
+  );
+
   const seedBook = useCallback(() => {
     const engine = engineRef.current;
     if (!engine) return;
-
-    const base = engine.getMidPrice() ?? engine.getLastPrice() ?? 100;
-    const now = Date.now();
-    const LEVELS = 12;
-    const STEP = 0.10;
-
-    for (let i = 1; i <= LEVELS; i++) {
-      engine.addOrder({
-        id: crypto.randomUUID(),
-        side: 'buy',
-        price: parseFloat((base - i * STEP).toFixed(2)),
-        quantity: Math.floor(Math.random() * 180) + 20,
-        timestamp: now + i,
-      });
-      engine.addOrder({
-        id: crypto.randomUUID(),
-        side: 'sell',
-        price: parseFloat((base + i * STEP).toFixed(2)),
-        quantity: Math.floor(Math.random() * 180) + 20,
-        timestamp: now + 100 + i,
-      });
-    }
-
+    seedEngine(engine);
     syncState(engine);
   }, [syncState]);
 
@@ -167,6 +185,7 @@ export function useSimulator(): SimulatorState {
     setTrades([]);
     setLastPrice(null);
     setVwap(null);
+    setImbalance(null);
   }, []);
 
   return {
@@ -179,8 +198,10 @@ export function useSimulator(): SimulatorState {
     setSpeed,
     lastPrice,
     vwap,
+    imbalance,
     addManualOrder,
     addMarketOrder,
+    cancelOrder,
     seedBook,
     reset,
   };

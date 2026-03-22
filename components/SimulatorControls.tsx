@@ -8,8 +8,8 @@ import Tooltip from './Tooltip';
 
 type Props = Pick<
   SimulatorState,
-  | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice' | 'vwap'
-  | 'addManualOrder' | 'addMarketOrder' | 'seedBook' | 'reset'
+  | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice' | 'vwap' | 'imbalance'
+  | 'addManualOrder' | 'addMarketOrder' | 'cancelOrder' | 'seedBook' | 'reset'
   | 'trades' | 'bids' | 'asks'
 > & { isDark: boolean; onToast?: (msg: string) => void };
 
@@ -31,7 +31,7 @@ function estimateMarket(book: Order[], qty: number) {
 }
 
 export default function SimulatorControls({
-  isAuto, setIsAuto, speed, setSpeed, lastPrice, vwap,
+  isAuto, setIsAuto, speed, setSpeed, lastPrice, vwap, imbalance,
   addManualOrder, addMarketOrder, seedBook, reset,
   trades, bids, asks, isDark, onToast,
 }: Props) {
@@ -73,11 +73,11 @@ export default function SimulatorControls({
   const isBuy = side === 'buy';
 
   return (
-    <div className={`flex flex-col h-full overflow-y-auto transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
+    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
 
       {/* ── Modalità simulatore ── */}
-      <div className={`px-4 py-3 border-b shrink-0 ${divider}`}>
-        <div className={`text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-1 ${muted}`}>
+      <div className={`px-4 py-2 border-b shrink-0 ${divider}`}>
+        <div className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1 ${muted}`}>
           Modalità simulatore
           <Tooltip
             isDark={isDark}
@@ -112,16 +112,9 @@ export default function SimulatorControls({
           </button>
         </div>
 
-        {/* Descrizione modalità attiva */}
-        <p className={`mt-2 text-[11px] leading-relaxed ${d ? 'text-zinc-500' : 'text-zinc-400'}`}>
-          {isAuto
-            ? 'Il simulatore genera ordini automatici. Puoi comunque inserire ordini manuali.'
-            : 'Modalità manuale attiva. Usa il form qui sotto per inserire i tuoi ordini.'}
-        </p>
-
         {/* Speed slider (solo auto) */}
         {isAuto && (
-          <div className="mt-3 space-y-1">
+          <div className="mt-2 space-y-1">
             <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${muted}`}>
               Velocità
               <Tooltip
@@ -146,7 +139,7 @@ export default function SimulatorControls({
         )}
 
         {/* Seed + Reset */}
-        <div className="flex gap-2 mt-3">
+        <div className="flex gap-2 mt-2">
           <button
             onClick={seedBook}
             className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[11px] font-semibold border transition-colors
@@ -171,13 +164,13 @@ export default function SimulatorControls({
       </div>
 
       {/* ── Form ordini ── */}
-      <div className="flex flex-col flex-1 px-4 pt-3 pb-4 space-y-3">
+      <div className="flex flex-col flex-1 px-4 pt-2 pb-2 space-y-2">
 
         {/* Buy / Sell tabs */}
         <div className={`flex rounded-lg overflow-hidden border shrink-0 ${divider}`}>
           <button
             onClick={() => setSide('buy')}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-colors
               ${isBuy
                 ? (d ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white')
                 : (d ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700')
@@ -187,7 +180,7 @@ export default function SimulatorControls({
           </button>
           <button
             onClick={() => setSide('sell')}
-            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-colors
               ${!isBuy
                 ? (d ? 'bg-red-600 text-white' : 'bg-red-600 text-white')
                 : (d ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-200' : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700')
@@ -222,13 +215,6 @@ export default function SimulatorControls({
             Mercato
           </button>
         </div>
-
-        {/* Descrizione tipo ordine */}
-        <p className={`text-[11px] leading-snug shrink-0 ${d ? 'text-zinc-500' : 'text-zinc-400'}`}>
-          {orderType === 'limit'
-            ? 'L\'ordine viene inserito nel book e si esegue solo se il mercato raggiunge il tuo prezzo.'
-            : 'L\'ordine viene eseguito immediatamente al miglior prezzo disponibile nel book.'}
-        </p>
 
         {/* Price (limit only) */}
         {orderType === 'limit' && (
@@ -304,7 +290,7 @@ export default function SimulatorControls({
         {/* Submit */}
         <button
           onClick={orderType === 'limit' ? handleLimitOrder : handleMarketOrder}
-          className={`w-full flex items-center justify-center gap-2 py-3 rounded-md text-xs font-bold uppercase tracking-widest transition-colors shrink-0
+          className={`w-full flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-colors shrink-0
             ${isBuy
               ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
               : 'bg-red-600 hover:bg-red-500 text-white'
@@ -315,7 +301,7 @@ export default function SimulatorControls({
         </button>
 
         {/* ── Stats ── */}
-        <div className={`border-t pt-3 space-y-2 shrink-0 ${divider}`}>
+        <div className={`border-t pt-2 space-y-1.5 shrink-0 ${divider}`}>
           {[
             {
               label: 'Last Price',
@@ -346,6 +332,34 @@ export default function SimulatorControls({
               <span className={`text-sm font-bold tabular-nums ${d ? 'text-white' : 'text-zinc-900'}`}>{value}</span>
             </div>
           ))}
+
+          {/* Imbalance bar */}
+          {imbalance !== null && (
+            <div className="space-y-1">
+              <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center ${muted}`}>
+                Imbalance
+                <Tooltip isDark={isDark} content="Rapporto tra volume bid e volume totale (bid+ask). Sopra 0.5 = pressione buy, sotto 0.5 = pressione sell." side="top" />
+              </div>
+              <div className={`relative h-2 rounded-full overflow-hidden ${d ? 'bg-zinc-700' : 'bg-zinc-200'}`}>
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full transition-all duration-300 bg-emerald-500"
+                  style={{ width: `${(imbalance * 100).toFixed(1)}%` }}
+                />
+                <div
+                  className="absolute right-0 top-0 h-full rounded-full transition-all duration-300 bg-red-500"
+                  style={{ width: `${((1 - imbalance) * 100).toFixed(1)}%`, left: 'auto' }}
+                />
+              </div>
+              <div className="flex justify-between">
+                <span className={`text-[10px] font-semibold ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  Bid {(imbalance * 100).toFixed(0)}%
+                </span>
+                <span className={`text-[10px] font-semibold ${d ? 'text-red-400' : 'text-red-600'}`}>
+                  Ask {((1 - imbalance) * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

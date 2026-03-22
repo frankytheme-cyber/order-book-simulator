@@ -6,6 +6,7 @@ import OrderBookView from '@/components/OrderBookView';
 import SimulatorControls from '@/components/SimulatorControls';
 import InfoPanel from '@/components/InfoPanel';
 import PriceChart from '@/components/PriceChart';
+import DepthChart from '@/components/DepthChart';
 import TradeHistory from '@/components/TradeHistory';
 import { Activity, Sun, Moon, HelpCircle, CheckCircle, X, AlertTriangle } from 'lucide-react';
 
@@ -133,12 +134,17 @@ export default function Page() {
       <section className={`border-t ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
 
         {/* Desktop: 3 colonne */}
-        <div className="hidden md:flex h-150 justify-center">
-          <div className="flex flex-col flex-1 min-w-0 max-w-2xl overflow-hidden">
-            <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
+        <div className="hidden md:flex h-150">
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            <div className="flex-1 min-h-0">
+              <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
+            </div>
+            <div className={`h-48 shrink-0 border-t ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+              <DepthChart bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
+            </div>
           </div>
-          <div className={`flex-1 min-w-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
+          <div className={`w-56 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} />
           </div>
           <div className="w-72 shrink-0">
             <SimulatorControls
@@ -148,8 +154,10 @@ export default function Page() {
               setSpeed={simulator.setSpeed}
               lastPrice={simulator.lastPrice}
               vwap={simulator.vwap}
+              imbalance={simulator.imbalance}
               addManualOrder={simulator.addManualOrder}
               addMarketOrder={simulator.addMarketOrder}
+              cancelOrder={simulator.cancelOrder}
               seedBook={simulator.seedBook}
               reset={simulator.reset}
               trades={simulator.trades}
@@ -170,7 +178,7 @@ export default function Page() {
             <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
           </div>
           <div className={`h-96 border-b ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} />
           </div>
           <div>
             <SimulatorControls
@@ -180,8 +188,10 @@ export default function Page() {
               setSpeed={simulator.setSpeed}
               lastPrice={simulator.lastPrice}
               vwap={simulator.vwap}
+              imbalance={simulator.imbalance}
               addManualOrder={simulator.addManualOrder}
               addMarketOrder={simulator.addMarketOrder}
+              cancelOrder={simulator.cancelOrder}
               seedBook={simulator.seedBook}
               reset={simulator.reset}
               trades={simulator.trades}
