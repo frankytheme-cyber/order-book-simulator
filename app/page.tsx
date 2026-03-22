@@ -6,6 +6,7 @@ import OrderBookView from '@/components/OrderBookView';
 import SimulatorControls from '@/components/SimulatorControls';
 import InfoPanel from '@/components/InfoPanel';
 import PriceChart from '@/components/PriceChart';
+import TradeHistory from '@/components/TradeHistory';
 import { Activity, Sun, Moon, HelpCircle, CheckCircle, X, AlertTriangle } from 'lucide-react';
 
 export default function Page() {
@@ -136,7 +137,7 @@ export default function Page() {
           <div className="flex flex-col flex-1 min-w-0 max-w-2xl overflow-hidden">
             <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
           </div>
-          <div className={`w-64 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+          <div className={`flex-1 min-w-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
             <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
           </div>
           <div className="w-72 shrink-0">
@@ -157,6 +158,9 @@ export default function Page() {
               isDark={isDark}
               onToast={handleToast}
             />
+          </div>
+          <div className={`w-56 shrink-0 border-l overflow-hidden ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <TradeHistory trades={simulator.trades} isDark={isDark} />
           </div>
         </div>
 
@@ -186,6 +190,9 @@ export default function Page() {
               isDark={isDark}
               onToast={handleToast}
             />
+          </div>
+          <div className={`border-t ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <TradeHistory trades={simulator.trades} isDark={isDark} />
           </div>
         </div>
 

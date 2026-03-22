@@ -52,6 +52,9 @@ export default function OrderBookView({ bids, asks, isDark }: Props) {
       </div>
 
       {/* ASKS — reversed so best ask sits just above spread, scrollable upward */}
+      <div className={`px-3 py-0.5 shrink-0 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
+        <span className={`text-[9px] font-bold uppercase tracking-widest ${d ? 'text-red-500' : 'text-red-600'}`}>Ask</span>
+      </div>
       <div className="flex flex-col-reverse flex-1 overflow-y-auto">
         {askRows.map((row) => {
           const pct = ((row.cumulative / maxAskCum) * 100).toFixed(1);
@@ -79,6 +82,9 @@ export default function OrderBookView({ bids, asks, isDark }: Props) {
       </div>
 
       {/* BIDS */}
+      <div className={`px-3 py-0.5 shrink-0 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
+        <span className={`text-[9px] font-bold uppercase tracking-widest ${d ? 'text-emerald-500' : 'text-emerald-600'}`}>Bid</span>
+      </div>
       <div className="flex flex-col flex-1 overflow-y-auto">
         {bidRows.map((row) => {
           const pct = ((row.cumulative / maxBidCum) * 100).toFixed(1);

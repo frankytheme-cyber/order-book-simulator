@@ -28,7 +28,7 @@ export default function TradeHistory({ trades, isDark }: Props) {
   const d = isDark;
 
   return (
-    <div className={`rounded-lg overflow-hidden flex flex-col border transition-colors duration-300 h-120 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
+    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
 
       {/* Header */}
       <div className={`px-4 py-2.5 border-b flex items-center justify-between ${d ? 'border-zinc-800' : 'border-zinc-200'}`}>
