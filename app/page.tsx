@@ -143,7 +143,7 @@ export default function Page() {
               <DepthChart bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
             </div>
           </div>
-          <div className={`w-56 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+          <div className={`w-86 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
             <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} />
           </div>
           <div className="w-72 shrink-0">
