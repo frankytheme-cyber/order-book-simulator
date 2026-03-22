@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSimulator } from '@/hooks/useSimulator';
 import OrderBookView from '@/components/OrderBookView';
-import TradeHistory from '@/components/TradeHistory';
 import SimulatorControls from '@/components/SimulatorControls';
 import InfoPanel from '@/components/InfoPanel';
+import PriceChart from '@/components/PriceChart';
 import { Activity, Sun, Moon, HelpCircle, CheckCircle, X, AlertTriangle } from 'lucide-react';
 
 export default function Page() {
@@ -128,32 +128,67 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ── Separatore sottile ── */}
-      <div className={`mx-auto max-w-6xl ${d ? 'border-t border-zinc-800/60' : 'border-t border-zinc-300/60'}`} />
+      {/* ── Trading Terminal ── */}
+      <section className={`border-t ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
 
-      {/* ── Tool Container ── */}
-      <section className="max-w-6xl mx-auto px-4 py-10 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
-          <TradeHistory trades={simulator.trades} isDark={isDark} />
+        {/* Desktop: 3 colonne */}
+        <div className="hidden md:flex h-150 justify-center">
+          <div className="flex flex-col flex-1 min-w-0 max-w-2xl overflow-hidden">
+            <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
+          </div>
+          <div className={`w-64 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
+          </div>
+          <div className="w-72 shrink-0">
+            <SimulatorControls
+              isAuto={simulator.isAuto}
+              setIsAuto={simulator.setIsAuto}
+              speed={simulator.speed}
+              setSpeed={simulator.setSpeed}
+              lastPrice={simulator.lastPrice}
+              vwap={simulator.vwap}
+              addManualOrder={simulator.addManualOrder}
+              addMarketOrder={simulator.addMarketOrder}
+              seedBook={simulator.seedBook}
+              reset={simulator.reset}
+              trades={simulator.trades}
+              bids={simulator.bids}
+              asks={simulator.asks}
+              isDark={isDark}
+              onToast={handleToast}
+            />
+          </div>
         </div>
-        <SimulatorControls
-          isAuto={simulator.isAuto}
-          setIsAuto={simulator.setIsAuto}
-          speed={simulator.speed}
-          setSpeed={simulator.setSpeed}
-          lastPrice={simulator.lastPrice}
-          vwap={simulator.vwap}
-          addManualOrder={simulator.addManualOrder}
-          addMarketOrder={simulator.addMarketOrder}
-          seedBook={simulator.seedBook}
-          reset={simulator.reset}
-          trades={simulator.trades}
-          bids={simulator.bids}
-          asks={simulator.asks}
-          isDark={isDark}
-          onToast={handleToast}
-        />
+
+        {/* Mobile: stack verticale */}
+        <div className="flex flex-col md:hidden">
+          <div className={`h-64 border-b ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
+          </div>
+          <div className={`h-96 border-b ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} />
+          </div>
+          <div>
+            <SimulatorControls
+              isAuto={simulator.isAuto}
+              setIsAuto={simulator.setIsAuto}
+              speed={simulator.speed}
+              setSpeed={simulator.setSpeed}
+              lastPrice={simulator.lastPrice}
+              vwap={simulator.vwap}
+              addManualOrder={simulator.addManualOrder}
+              addMarketOrder={simulator.addMarketOrder}
+              seedBook={simulator.seedBook}
+              reset={simulator.reset}
+              trades={simulator.trades}
+              bids={simulator.bids}
+              asks={simulator.asks}
+              isDark={isDark}
+              onToast={handleToast}
+            />
+          </div>
+        </div>
+
       </section>
 
       {/* ── Sezione informativa (SEO) ── */}

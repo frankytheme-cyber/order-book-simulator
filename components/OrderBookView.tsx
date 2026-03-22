@@ -19,117 +19,81 @@ function computeRows(orders: Order[], maxRows: number) {
 }
 
 export default function OrderBookView({ bids, asks, isDark }: Props) {
-  const MAX_ROWS = 15;
-
-  const bidRows = computeRows(bids, MAX_ROWS);
+  const bidRows = computeRows(bids, bids.length);
   const maxBidCum = bidRows.length > 0 ? Math.max(...bidRows.map((r) => r.cumulative)) : 1;
 
-  const askRows = computeRows(asks, MAX_ROWS);
+  // Asks reversed so best ask is nearest to spread line
+  const askRows = computeRows(asks, asks.length);
   const maxAskCum = askRows.length > 0 ? Math.max(...askRows.map((r) => r.cumulative)) : 1;
 
   const bestBid = bids[0]?.price ?? null;
   const bestAsk = asks[0]?.price ?? null;
-  const spread   = bestBid !== null && bestAsk !== null ? (bestAsk - bestBid).toFixed(2) : '—';
-  const midPrice = bestBid !== null && bestAsk !== null ? ((bestBid + bestAsk) / 2).toFixed(2) : '—';
+  const spread  = bestBid !== null && bestAsk !== null ? (bestAsk - bestBid).toFixed(2) : '—';
 
   const d = isDark;
   const divider = d ? 'border-zinc-800' : 'border-zinc-200';
 
-  const colHead = `grid grid-cols-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border-b
-    ${d ? `text-zinc-500 ${divider} bg-zinc-950` : `text-zinc-500 ${divider} bg-zinc-50`}`;
-
-  const emptyMsg = `px-3 py-8 text-center text-xs ${d ? 'text-zinc-600' : 'text-zinc-400'}`;
-
   return (
-    <div className={`rounded-lg overflow-hidden flex flex-col border transition-colors duration-300 h-120 ${d ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-300'}`}>
+    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
 
       {/* Header */}
-      <div className={`px-4 py-2.5 border-b flex items-center justify-between ${divider}`}>
+      <div className={`px-3 py-2.5 border-b flex items-center justify-between shrink-0 ${divider}`}>
         <span className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-zinc-300' : 'text-zinc-600'}`}>
-          Order Book
+          Registro Ordini
         </span>
-        <div className="flex items-center gap-5 text-xs">
-          <span className={`flex items-center ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
-            Spread
-            <Tooltip isDark={isDark} content="Differenza tra il miglior ask e il miglior bid. Misura il costo immediato di un ordine a mercato." />
-            <span className={`font-bold ml-2 tabular-nums ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>{spread}</span>
-          </span>
-          <span className={`flex items-center ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
-            Mid
-            <Tooltip isDark={isDark} content="(Best Bid + Best Ask) / 2. Prezzo di riferimento usato dalla simulazione automatica per generare nuovi ordini." />
-            <span className={`font-bold ml-2 tabular-nums ${d ? 'text-white' : 'text-zinc-900'}`}>{midPrice}</span>
-          </span>
-        </div>
+        <Tooltip isDark={isDark} content="Asks (vendita) in rosso sopra lo spread, bids (acquisto) in verde sotto." side="top" />
       </div>
 
-      {/* Two-column body */}
-      <div className="grid grid-cols-2 flex-1 overflow-hidden">
+      {/* Column headers */}
+      <div className={`grid grid-cols-3 px-3 py-1 text-[10px] font-bold uppercase tracking-widest border-b shrink-0 ${d ? 'text-zinc-500 border-zinc-800' : 'text-zinc-500 border-zinc-200'}`}>
+        <span>Prezzo</span>
+        <span className="text-right">Qtà</span>
+        <span className="text-right">Totale</span>
+      </div>
 
-        {/* ── BIDS ── */}
-        <div className={`flex flex-col border-r ${divider}`}>
-          <div className={colHead}>
-            <span className={`flex items-center ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              Bids
-              <Tooltip isDark={isDark} content="Ordini di acquisto. Ordinati dal prezzo più alto (best bid) al più basso. La barra cresce verso sinistra mostrando il volume cumulativo." />
-            </span>
-            <span className="text-right">Qty</span>
-            <span className={`text-right flex items-center justify-end ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
-              Total
-              <Tooltip isDark={isDark} content="Valore totale dell'ordine: Prezzo × Quantità." side="top" />
-            </span>
-          </div>
-          <div className="flex flex-col">
-            {bidRows.length === 0 ? (
-              <div className={emptyMsg}>No bids</div>
-            ) : bidRows.map((row) => {
-              const pct = ((row.cumulative / maxBidCum) * 100).toFixed(1);
-              return (
-                <div
-                  key={row.id}
-                  className={`relative grid grid-cols-3 px-3 py-[4px] text-xs transition-colors ${d ? 'hover:bg-emerald-950/40' : 'hover:bg-emerald-50'}`}
-                  style={{ background: `linear-gradient(to left, ${d ? 'rgba(16,185,129,0.22)' : 'rgba(16,185,129,0.14)'} ${pct}%, transparent ${pct}%)` }}
-                >
-                  <span className={`font-bold tabular-nums ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>{row.price.toFixed(2)}</span>
-                  <span className={`text-right tabular-nums font-medium ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>{row.quantity}</span>
-                  <span className={`text-right tabular-nums ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>{(row.price * row.quantity).toFixed(0)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* ASKS — reversed so best ask sits just above spread, scrollable upward */}
+      <div className="flex flex-col-reverse flex-1 overflow-y-auto">
+        {askRows.map((row) => {
+          const pct = ((row.cumulative / maxAskCum) * 100).toFixed(1);
+          return (
+            <div
+              key={row.id}
+              className={`relative grid grid-cols-3 px-3 py-0.75 text-xs transition-colors ${d ? 'hover:bg-red-950/30' : 'hover:bg-red-50'}`}
+              style={{ background: `linear-gradient(to left, ${d ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.10)'} ${pct}%, transparent ${pct}%)` }}
+            >
+              <span className={`font-semibold tabular-nums ${d ? 'text-red-400' : 'text-red-600'}`}>{row.price.toFixed(2)}</span>
+              <span className={`text-right tabular-nums ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>{row.quantity}</span>
+              <span className={`text-right tabular-nums ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>{(row.price * row.quantity).toFixed(0)}</span>
+            </div>
+          );
+        })}
+      </div>
 
-        {/* ── ASKS ── */}
-        <div className="flex flex-col">
-          <div className={colHead}>
-            <span className={`flex items-center ${d ? 'text-red-400' : 'text-red-600'}`}>
-              Asks
-              <Tooltip isDark={isDark} content="Ordini di vendita. Ordinati dal prezzo più basso (best ask) al più alto. La barra cresce verso destra mostrando il volume cumulativo." />
-            </span>
-            <span className="text-right">Qty</span>
-            <span className={`text-right flex items-center justify-end ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
-              Total
-              <Tooltip isDark={isDark} content="Valore totale dell'ordine: Prezzo × Quantità." side="top" />
-            </span>
-          </div>
-          <div className="flex flex-col">
-            {askRows.length === 0 ? (
-              <div className={emptyMsg}>No asks</div>
-            ) : askRows.map((row) => {
-              const pct = ((row.cumulative / maxAskCum) * 100).toFixed(1);
-              return (
-                <div
-                  key={row.id}
-                  className={`relative grid grid-cols-3 px-3 py-[4px] text-xs transition-colors ${d ? 'hover:bg-red-950/40' : 'hover:bg-red-50'}`}
-                  style={{ background: `linear-gradient(to right, ${d ? 'rgba(239,68,68,0.22)' : 'rgba(239,68,68,0.14)'} ${pct}%, transparent ${pct}%)` }}
-                >
-                  <span className={`font-bold tabular-nums ${d ? 'text-red-400' : 'text-red-600'}`}>{row.price.toFixed(2)}</span>
-                  <span className={`text-right tabular-nums font-medium ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>{row.quantity}</span>
-                  <span className={`text-right tabular-nums ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>{(row.price * row.quantity).toFixed(0)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* Spread row */}
+      <div className={`px-3 py-1.5 border-y flex items-center justify-between shrink-0 ${divider} ${d ? 'bg-zinc-950' : 'bg-zinc-50'}`}>
+        <span className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
+          Spread
+          <Tooltip isDark={isDark} content="Best Ask − Best Bid. Costo implicito di un ordine a mercato." side="top" />
+        </span>
+        <span className={`text-xs font-bold tabular-nums ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>{spread}</span>
+      </div>
+
+      {/* BIDS */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        {bidRows.map((row) => {
+          const pct = ((row.cumulative / maxBidCum) * 100).toFixed(1);
+          return (
+            <div
+              key={row.id}
+              className={`relative grid grid-cols-3 px-3 py-0.75 text-xs transition-colors ${d ? 'hover:bg-emerald-950/30' : 'hover:bg-emerald-50'}`}
+              style={{ background: `linear-gradient(to left, ${d ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.10)'} ${pct}%, transparent ${pct}%)` }}
+            >
+              <span className={`font-semibold tabular-nums ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>{row.price.toFixed(2)}</span>
+              <span className={`text-right tabular-nums ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>{row.quantity}</span>
+              <span className={`text-right tabular-nums ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>{(row.price * row.quantity).toFixed(0)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
