@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Engine, Order, Trade } from '@/lib/engine';
+import { Engine, Order, Trade, Account, emptyAccount } from '@/lib/engine';
 
 export interface SimulatorState {
   bids: Order[];
@@ -14,8 +14,15 @@ export interface SimulatorState {
   lastPrice: number | null;
   vwap: number | null;
   imbalance: number | null;
-  addManualOrder: (price: number, quantity: number, side: 'buy' | 'sell') => void;
-  addMarketOrder: (side: 'buy' | 'sell', quantity: number) => void;
+  /** Prezzo usato per valutare la posizione (mid o ultimo prezzo). */
+  markPrice: number | null;
+  /** Posizione e P&L dell'utente. */
+  userAccount: Account;
+  /** Id degli ordini dell'utente ancora aperti nel book. */
+  userOrderIds: Set<string>;
+  cancelUserOrders: () => void;
+  addManualOrder: (price: number, quantity: number, side: 'buy' | 'sell') => Trade[];
+  addMarketOrder: (side: 'buy' | 'sell', quantity: number) => Trade[];
   cancelOrder: (id: string) => void;
   seedBook: () => void;
   reset: () => void;
@@ -64,6 +71,9 @@ export function useSimulator(): SimulatorState {
   const [lastPrice, setLastPrice] = useState<number | null>(null);
   const [vwap, setVwap] = useState<number | null>(null);
   const [imbalance, setImbalance] = useState<number | null>(null);
+  const [markPrice, setMarkPrice] = useState<number | null>(null);
+  const [userAccount, setUserAccount] = useState<Account>(emptyAccount());
+  const [userOrderIds, setUserOrderIds] = useState<Set<string>>(new Set());
   const seeded = useRef(false);
 
   // Initialize engine + seed on first mount
@@ -77,6 +87,7 @@ export function useSimulator(): SimulatorState {
       seedEngine(engine);
       setBids([...engine.bids]);
       setAsks([...engine.asks]);
+      setMarkPrice(engine.getMarkPrice());
     }
   }, []);
 
@@ -87,6 +98,9 @@ export function useSimulator(): SimulatorState {
     setLastPrice(engine.getLastPrice());
     setVwap(engine.getVWAP());
     setImbalance(engine.getImbalance());
+    setMarkPrice(engine.getMarkPrice());
+    setUserAccount(engine.getAccount('user'));
+    setUserOrderIds(new Set(engine.getOrdersByOwner('user').map((o) => o.id)));
   }, []);
 
   // Auto-generate orders
@@ -135,28 +149,31 @@ export function useSimulator(): SimulatorState {
   }, [isAuto, speed, syncState]);
 
   const addManualOrder = useCallback(
-    (price: number, quantity: number, side: 'buy' | 'sell') => {
+    (price: number, quantity: number, side: 'buy' | 'sell'): Trade[] => {
       const engine = engineRef.current;
-      if (!engine) return;
+      if (!engine) return [];
       const order: Order = {
         id: crypto.randomUUID(),
         side,
         price,
         quantity,
         timestamp: Date.now(),
+        owner: 'user',
       };
-      engine.addOrder(order);
+      const executed = engine.addOrder(order);
       syncState(engine);
+      return executed;
     },
     [syncState]
   );
 
   const addMarketOrder = useCallback(
-    (side: 'buy' | 'sell', quantity: number) => {
+    (side: 'buy' | 'sell', quantity: number): Trade[] => {
       const engine = engineRef.current;
-      if (!engine) return;
-      engine.addMarketOrder(side, quantity);
+      if (!engine) return [];
+      const executed = engine.addMarketOrder(side, quantity, 'user');
       syncState(engine);
+      return executed;
     },
     [syncState]
   );
@@ -170,6 +187,13 @@ export function useSimulator(): SimulatorState {
     },
     [syncState]
   );
+
+  const cancelUserOrders = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.cancelAllByOwner('user');
+    syncState(engine);
+  }, [syncState]);
 
   const seedBook = useCallback(() => {
     const engine = engineRef.current;
@@ -186,6 +210,9 @@ export function useSimulator(): SimulatorState {
     setLastPrice(null);
     setVwap(null);
     setImbalance(null);
+    setMarkPrice(null);
+    setUserAccount(emptyAccount());
+    setUserOrderIds(new Set());
   }, []);
 
   return {
@@ -199,6 +226,10 @@ export function useSimulator(): SimulatorState {
     lastPrice,
     vwap,
     imbalance,
+    markPrice,
+    userAccount,
+    userOrderIds,
+    cancelUserOrders,
     addManualOrder,
     addMarketOrder,
     cancelOrder,

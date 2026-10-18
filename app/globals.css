@@ -115,3 +115,19 @@ body {
   -webkit-text-fill-color: transparent;
   animation: shimmer 4s linear infinite;
 }
+
+.hero-shimmer-amber {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    rgba(251, 191, 36, 0.7) 40%,
+    rgba(251, 191, 36, 1) 50%,
+    rgba(251, 191, 36, 0.7) 60%,
+    currentColor 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}

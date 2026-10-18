@@ -85,6 +85,9 @@ const jsonLd = {
     "Trade history tracking",
     "Manual limit and market order placement",
     "Adjustable simulation speed",
+    "Position and P&L tracking for your own orders",
+    "Candlestick and market depth charts",
+    "Interactive market manipulation scenarios: spoofing, pump and dump, bear raid, wash trading, layering",
     "Dark and light theme",
   ],
   author: {

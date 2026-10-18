@@ -8,7 +8,8 @@ import InfoPanel from '@/components/InfoPanel';
 import PriceChart from '@/components/PriceChart';
 import DepthChart from '@/components/DepthChart';
 import TradeHistory from '@/components/TradeHistory';
-import { Activity, Sun, Moon, HelpCircle, CheckCircle, X, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, Sun, Moon, HelpCircle, CheckCircle, X, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export default function Page() {
   const simulator = useSimulator();
@@ -44,42 +45,55 @@ export default function Page() {
     <div className={`min-h-screen transition-colors duration-300 ${d ? 'bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'}`}>
 
       {/* ── Header (originale) ── */}
-      <header className={`border-b px-6 py-3 flex items-center justify-between ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
+      <header className={`border-b px-4 sm:px-6 py-3 flex items-center justify-between gap-3 ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
         <div className="flex items-center gap-3">
           <Activity size={16} className={d ? 'text-emerald-400' : 'text-emerald-600'} />
-          <h1 className={`text-sm font-bold tracking-[0.2em] uppercase ${d ? 'text-emerald-400' : 'text-emerald-700'}`}>
+          <h1 className={`text-xs sm:text-sm font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase leading-tight ${d ? 'text-emerald-400' : 'text-emerald-700'}`}>
             Order Book Simulator
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Indicatore live */}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${simulator.isAuto ? 'bg-emerald-400 animate-pulse' : d ? 'bg-zinc-700' : 'bg-zinc-400'}`} />
-            <span className={`text-[10px] uppercase tracking-widest ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
+            <span className={`hidden sm:inline text-[10px] uppercase tracking-widest ${d ? 'text-zinc-500' : 'text-zinc-500'}`}>
               {simulator.isAuto ? 'Live' : 'In pausa'}
             </span>
           </div>
 
+          {/* Link Manipolazione */}
+          <Link
+            href="/manipulation"
+            aria-label="Manipolazione di mercato"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
+              ${d ? 'bg-zinc-800 border-zinc-700 text-amber-400 hover:text-amber-300 hover:border-amber-600'
+                  : 'bg-white border-zinc-300 text-amber-600 hover:text-amber-700 hover:border-amber-400'}`}
+          >
+            <ShieldAlert size={13} /> <span className="hidden sm:inline">Manipolazione</span>
+          </Link>
+
           {/* Guida */}
           <button
             onClick={() => setShowInfo(true)}
+            aria-label="Guida"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
               ${d ? 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
                   : 'bg-white border-zinc-300 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'}`}
           >
-            <HelpCircle size={13} /> Guida
+            <HelpCircle size={13} /> <span className="hidden sm:inline">Guida</span>
           </button>
 
           {/* Toggle tema */}
           <button
             onClick={() => setIsDark(!isDark)}
+            aria-label={d ? 'Tema chiaro' : 'Tema scuro'}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
               ${d ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-white'
                   : 'bg-white border-zinc-300 text-zinc-600 hover:border-zinc-500 hover:text-zinc-900'}`}
           >
             {d ? <Sun size={13} /> : <Moon size={13} />}
-            {d ? 'Light' : 'Dark'}
+            <span className="hidden sm:inline">{d ? 'Light' : 'Dark'}</span>
           </button>
         </div>
       </header>
@@ -144,7 +158,7 @@ export default function Page() {
             </div>
           </div>
           <div className={`w-86 shrink-0 border-l border-r ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} />
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} highlightedIds={simulator.userOrderIds} highlightTone="blue" />
           </div>
           <div className="w-72 shrink-0">
             <SimulatorControls
@@ -163,12 +177,16 @@ export default function Page() {
               trades={simulator.trades}
               bids={simulator.bids}
               asks={simulator.asks}
+              markPrice={simulator.markPrice}
+              userAccount={simulator.userAccount}
+              userOrderIds={simulator.userOrderIds}
+              cancelUserOrders={simulator.cancelUserOrders}
               isDark={isDark}
               onToast={handleToast}
             />
           </div>
           <div className={`w-56 shrink-0 border-l overflow-hidden ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <TradeHistory trades={simulator.trades} isDark={isDark} />
+            <TradeHistory trades={simulator.trades} isDark={isDark} markOwner="user" markTone="blue" markLabel="I tuoi trade" />
           </div>
         </div>
 
@@ -178,7 +196,7 @@ export default function Page() {
             <PriceChart trades={simulator.trades} lastPrice={simulator.lastPrice} isDark={isDark} />
           </div>
           <div className={`h-96 border-b ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} />
+            <OrderBookView bids={simulator.bids} asks={simulator.asks} isDark={isDark} onCancel={simulator.cancelOrder} highlightedIds={simulator.userOrderIds} highlightTone="blue" />
           </div>
           <div>
             <SimulatorControls
@@ -197,12 +215,16 @@ export default function Page() {
               trades={simulator.trades}
               bids={simulator.bids}
               asks={simulator.asks}
+              markPrice={simulator.markPrice}
+              userAccount={simulator.userAccount}
+              userOrderIds={simulator.userOrderIds}
+              cancelUserOrders={simulator.cancelUserOrders}
               isDark={isDark}
               onToast={handleToast}
             />
           </div>
           <div className={`border-t ${d ? 'border-zinc-800' : 'border-zinc-300'}`}>
-            <TradeHistory trades={simulator.trades} isDark={isDark} />
+            <TradeHistory trades={simulator.trades} isDark={isDark} markOwner="user" markTone="blue" markLabel="I tuoi trade" />
           </div>
         </div>
 
@@ -245,7 +267,10 @@ export default function Page() {
             <ul className="list-disc list-inside space-y-1">
               <li>Order book in tempo reale con aggiornamenti bid/ask live</li>
               <li>Velocità di simulazione configurabile</li>
-              <li>Inserimento manuale di ordini limit e market</li>
+              <li>Inserimento manuale di ordini limit e market, con stima del prezzo medio di esecuzione</li>
+              <li>Posizione e P&amp;L (realizzato e aperto) dei tuoi ordini, calcolati con il metodo del costo medio</li>
+              <li>Grafico a candele e grafico di profondità (depth chart)</li>
+              <li>Modulo didattico sulla manipolazione di mercato: spoofing, pump &amp; dump, bear raid, wash trading e layering</li>
               <li>Storico trade con prezzo e quantità di esecuzione</li>
               <li>Monitoraggio di spread e ultimo prezzo</li>
               <li>Tema chiaro e scuro</li>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap, Bot, User } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, DatabaseZap, Zap, Bot, User, Wallet, XCircle } from 'lucide-react';
 import { SimulatorState } from '@/hooks/useSimulator';
-import { Order } from '@/lib/engine';
+import { Order, Trade, accountPnl } from '@/lib/engine';
 import Tooltip from './Tooltip';
 
 type Props = Pick<
@@ -11,6 +11,7 @@ type Props = Pick<
   | 'isAuto' | 'setIsAuto' | 'speed' | 'setSpeed' | 'lastPrice' | 'vwap' | 'imbalance'
   | 'addManualOrder' | 'addMarketOrder' | 'cancelOrder' | 'seedBook' | 'reset'
   | 'trades' | 'bids' | 'asks'
+  | 'markPrice' | 'userAccount' | 'userOrderIds' | 'cancelUserOrders'
 > & { isDark: boolean; onToast?: (msg: string) => void };
 
 type OrderType = 'limit' | 'market';
@@ -30,10 +31,22 @@ function estimateMarket(book: Order[], qty: number) {
   return { avgPrice: totalValue / filled, filled, unfilled: remaining };
 }
 
+function fillSummary(executed: Trade[]) {
+  const qty = executed.reduce((s, t) => s + t.quantity, 0);
+  if (qty === 0) return null;
+  const avg = executed.reduce((s, t) => s + t.price * t.quantity, 0) / qty;
+  return { qty, avg };
+}
+
+function fmtSigned(v: number) {
+  return `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
+}
+
 export default function SimulatorControls({
   isAuto, setIsAuto, speed, setSpeed, lastPrice, vwap, imbalance,
   addManualOrder, addMarketOrder, seedBook, reset,
   trades, bids, asks, isDark, onToast,
+  markPrice, userAccount, userOrderIds, cancelUserOrders,
 }: Props) {
   const [orderType, setOrderType] = useState<OrderType>('limit');
   const [side, setSide]           = useState<Side>('buy');
@@ -50,17 +63,28 @@ export default function SimulatorControls({
   const handleLimitOrder = () => {
     const p = parseFloat(price);
     const q = parseInt(quantity);
-    if (!p || !q || p <= 0 || q <= 0) return;
-    addManualOrder(p, q, side);
-    onToast?.(`Ordine ${side === 'buy' ? 'Buy' : 'Sell'} Limit inserito — ${q} @ ${p.toFixed(2)}`);
+    if (!p || !q || p <= 0 || q <= 0) {
+      onToast?.('Inserisci un prezzo e una quantità validi');
+      return;
+    }
+    const fill = fillSummary(addManualOrder(p, q, side));
+    const label = `${side === 'buy' ? 'Buy' : 'Sell'} Limit ${q} @ ${p.toFixed(2)}`;
+    if (!fill) onToast?.(`${label} — in attesa nel book`);
+    else if (fill.qty < q) onToast?.(`${label} — eseguiti ${fill.qty} @ ${fill.avg.toFixed(2)}, ${q - fill.qty} nel book`);
+    else onToast?.(`${label} — eseguito subito @ ${fill.avg.toFixed(2)}`);
     setPrice(''); setQuantity('');
   };
 
   const handleMarketOrder = () => {
     const q = parseInt(quantity);
-    if (!q || q <= 0) return;
-    addMarketOrder(side, q);
-    onToast?.(`Ordine ${side === 'buy' ? 'Buy' : 'Sell'} Market inviato — Qtà ${q}`);
+    if (!q || q <= 0) {
+      onToast?.('Inserisci una quantità valida');
+      return;
+    }
+    const fill = fillSummary(addMarketOrder(side, q));
+    const label = `${side === 'buy' ? 'Buy' : 'Sell'} Market ${q}`;
+    if (!fill) onToast?.(`${label} — nessuna liquidità disponibile`);
+    else onToast?.(`${label} — eseguiti ${fill.qty} @ ${fill.avg.toFixed(2)}${fill.qty < q ? ` (${q - fill.qty} non eseguiti)` : ''}`);
     setQuantity('');
   };
 
@@ -71,9 +95,16 @@ export default function SimulatorControls({
         : 'bg-zinc-50 border-zinc-300 text-zinc-900 placeholder-zinc-400 focus:border-emerald-500 focus:ring-emerald-500/20'}`;
 
   const isBuy = side === 'buy';
+  const submit = orderType === 'limit' ? handleLimitOrder : handleMarketOrder;
+  const onEnter = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') submit(); };
+
+  const pnl = accountPnl(userAccount, markPrice);
+  const hasActivity = userAccount.tradeCount > 0 || userOrderIds.size > 0;
+  const pnlColor = (v: number) => v > 0 ? (d ? 'text-emerald-400' : 'text-emerald-600')
+    : v < 0 ? (d ? 'text-red-400' : 'text-red-600') : (d ? 'text-zinc-300' : 'text-zinc-700');
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
+    <div className={`flex flex-col h-full overflow-y-auto transition-colors duration-300 ${d ? 'bg-zinc-900' : 'bg-white'}`}>
 
       {/* ── Modalità simulatore ── */}
       <div className={`px-4 py-2 border-b shrink-0 ${divider}`}>
@@ -230,10 +261,29 @@ export default function SimulatorControls({
             <input
               type="number" value={price}
               onChange={(e) => setPrice(e.target.value)}
+              onKeyDown={onEnter}
               placeholder={asks[0] ? asks[0].price.toFixed(2) : '0.00'}
               step="0.01"
               className={inputCls}
             />
+            <div className="flex gap-1">
+              {[
+                { label: 'Bid', value: bids[0]?.price },
+                { label: 'Mid', value: bids[0] && asks[0] ? (bids[0].price + asks[0].price) / 2 : undefined },
+                { label: 'Ask', value: asks[0]?.price },
+              ].map(({ label, value }) => (
+                <button
+                  key={label}
+                  type="button"
+                  disabled={value === undefined}
+                  onClick={() => value !== undefined && setPrice(value.toFixed(2))}
+                  className={`flex-1 rounded px-1 py-0.5 text-[10px] font-semibold tabular-nums border transition-colors disabled:opacity-40
+                    ${d ? 'border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500' : 'border-zinc-300 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'}`}
+                >
+                  {label} {value !== undefined ? value.toFixed(2) : '—'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -252,6 +302,7 @@ export default function SimulatorControls({
           <input
             type="number" value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
+            onKeyDown={onEnter}
             placeholder="100" step="1" min="1"
             className={inputCls}
           />
@@ -289,7 +340,7 @@ export default function SimulatorControls({
 
         {/* Submit */}
         <button
-          onClick={orderType === 'limit' ? handleLimitOrder : handleMarketOrder}
+          onClick={submit}
           className={`w-full flex items-center justify-center gap-2 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-colors shrink-0
             ${isBuy
               ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -299,6 +350,49 @@ export default function SimulatorControls({
           {orderType === 'market' ? <Zap size={13} /> : (isBuy ? <TrendingUp size={13} /> : <TrendingDown size={13} />)}
           {isBuy ? 'Acquista' : 'Vendi'} {orderType === 'limit' ? 'a Limite' : 'a Mercato'}
         </button>
+
+        {/* ── La tua posizione ── */}
+        <div className={`rounded-md border px-3 py-2 space-y-1 shrink-0 ${d ? 'bg-zinc-950 border-blue-500/30' : 'bg-blue-50/50 border-blue-200'}`}>
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ${d ? 'text-blue-400' : 'text-blue-700'}`}>
+              <Wallet size={11} /> La tua posizione
+              <Tooltip
+                isDark={isDark}
+                content="Calcolata sui tuoi ordini eseguiti con il metodo del costo medio. Il P&L aperto è valutato al mid price. I tuoi ordini nel book sono evidenziati in blu."
+                side="top"
+              />
+            </span>
+            {userOrderIds.size > 0 && (
+              <button
+                onClick={() => { cancelUserOrders(); onToast?.(`${userOrderIds.size} ordini cancellati`); }}
+                className={`flex items-center gap-1 text-[10px] font-semibold ${d ? 'text-zinc-500 hover:text-red-400' : 'text-zinc-500 hover:text-red-600'}`}
+                title="Cancella tutti i tuoi ordini aperti"
+              >
+                <XCircle size={11} /> {userOrderIds.size} aperti
+              </button>
+            )}
+          </div>
+          {!hasActivity ? (
+            <p className={`text-[11px] ${muted}`}>Nessuna operazione. Inserisci un ordine per iniziare.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+              <span className={muted}>Posizione</span>
+              <span className={`text-right font-bold tabular-nums ${userAccount.position > 0 ? (d ? 'text-emerald-400' : 'text-emerald-600') : userAccount.position < 0 ? (d ? 'text-red-400' : 'text-red-600') : (d ? 'text-zinc-300' : 'text-zinc-700')}`}>
+                {userAccount.position > 0 ? 'Long ' : userAccount.position < 0 ? 'Short ' : ''}{Math.abs(userAccount.position)}
+              </span>
+              <span className={muted}>Prezzo medio</span>
+              <span className={`text-right font-bold tabular-nums ${d ? 'text-zinc-200' : 'text-zinc-800'}`}>
+                {userAccount.position !== 0 ? userAccount.avgPrice.toFixed(2) : '—'}
+              </span>
+              <span className={muted}>P&amp;L realizzato</span>
+              <span className={`text-right font-bold tabular-nums ${pnlColor(pnl.realized)}`}>{fmtSigned(pnl.realized)}</span>
+              <span className={muted}>P&amp;L aperto</span>
+              <span className={`text-right font-bold tabular-nums ${pnlColor(pnl.unrealized)}`}>{fmtSigned(pnl.unrealized)}</span>
+              <span className={`font-semibold ${d ? 'text-zinc-300' : 'text-zinc-700'}`}>Totale</span>
+              <span className={`text-right font-bold tabular-nums ${pnlColor(pnl.total)}`}>{fmtSigned(pnl.total)}</span>
+            </div>
+          )}
+        </div>
 
         {/* ── Stats ── */}
         <div className={`border-t pt-2 space-y-1.5 shrink-0 ${divider}`}>

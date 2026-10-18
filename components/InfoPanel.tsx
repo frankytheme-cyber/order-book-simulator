@@ -1,6 +1,6 @@
 'use client';
 
-import { X, BookOpen, Zap, ArrowLeftRight, BarChart2, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, BookOpen, Zap, ArrowLeftRight, BarChart2, TrendingUp } from 'lucide-react';
 
 interface Props {
   isDark: boolean;

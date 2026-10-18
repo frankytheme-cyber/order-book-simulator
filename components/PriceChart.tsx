@@ -7,12 +7,15 @@ interface Props {
   trades: Trade[];
   lastPrice: number | null;
   isDark: boolean;
+  /** Intervallo iniziale delle candele (es. '1s', '5s'). */
+  defaultInterval?: string;
 }
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 // Interval options in ms
 const INTERVALS: { label: string; ms: number }[] = [
+  { label: '1s',  ms: 1_000 },
   { label: '5s',  ms: 5_000 },
   { label: '15s', ms: 15_000 },
   { label: '30s', ms: 30_000 },
@@ -59,10 +62,11 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
-export default function PriceChart({ trades, lastPrice, isDark }: Props) {
+export default function PriceChart({ trades, lastPrice, isDark, defaultInterval = '5s' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize]         = useState({ w: 800, h: 400 });
-  const [intervalIdx, setIntervalIdx] = useState(0); // default 5s
+  const [intervalIdx, setIntervalIdx] = useState(() =>
+    Math.max(0, INTERVALS.findIndex((iv) => iv.label === defaultInterval)));
 
   useEffect(() => {
     const el = containerRef.current;
@@ -78,8 +82,8 @@ export default function PriceChart({ trades, lastPrice, isDark }: Props) {
   const d = isDark;
   const { w, h } = size;
   const PAD = { top: 40, right: 68, bottom: 36, left: 12 };
-  const chartW = w - PAD.left - PAD.right;
-  const chartH = h - PAD.top - PAD.bottom;
+  const chartW = Math.max(0, w - PAD.left - PAD.right);
+  const chartH = Math.max(0, h - PAD.top - PAD.bottom);
 
   const intervalMs = INTERVALS[intervalIdx].ms;
 
@@ -115,10 +119,15 @@ export default function PriceChart({ trades, lastPrice, isDark }: Props) {
 
     // X ticks: up to 5 evenly spaced candle indices
     const nXTicks = Math.min(5, candles.length);
-    const xTicks = Array.from({ length: nXTicks }, (_, i) => {
+    // Le etichette troppo vicine (poche candele strette) si sovrapporrebbero: teniamo solo quelle distanziate
+    const MIN_LABEL_GAP = 64;
+    const xTicks: { x: number; label: string }[] = [];
+    for (let i = nXTicks - 1; i >= 0; i--) {
       const idx = Math.round((i / (nXTicks - 1 || 1)) * (candles.length - 1));
-      return { x: toX(idx), label: formatTime(candles[idx].ts) };
-    });
+      const x = toX(idx);
+      if (xTicks.length > 0 && xTicks[xTicks.length - 1].x - x < MIN_LABEL_GAP) continue;
+      xTicks.push({ x, label: formatTime(candles[idx].ts) });
+    }
 
     // Last price line
     const lastY = lastPrice !== null ? toY(lastPrice) : null;

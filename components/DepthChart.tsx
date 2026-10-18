@@ -27,8 +27,8 @@ export default function DepthChart({ bids, asks, isDark }: Props) {
   const d = isDark;
   const { w, h } = size;
   const PAD = { top: 20, right: 10, bottom: 28, left: 10 };
-  const chartW = w - PAD.left - PAD.right;
-  const chartH = h - PAD.top - PAD.bottom;
+  const chartW = Math.max(0, w - PAD.left - PAD.right);
+  const chartH = Math.max(0, h - PAD.top - PAD.bottom);
 
   const chart = useMemo(() => {
     if (bids.length === 0 && asks.length === 0) return null;
@@ -104,7 +104,7 @@ export default function DepthChart({ bids, asks, isDark }: Props) {
     const midX = toX(mid);
 
     return { bidPath, askPath, xTicks, midX, maxVol, toX, toY };
-  }, [bids, asks, chartW, chartH, PAD.left, PAD.top, PAD.right]);
+  }, [bids, asks, chartW, chartH, PAD.left, PAD.top]);
 
   const bg        = d ? '#18181b' : '#ffffff';
   const gridColor = d ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';

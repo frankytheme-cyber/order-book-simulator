@@ -8,7 +8,15 @@ interface Props {
   asks: Order[];
   isDark: boolean;
   onCancel?: (id: string) => void;
+  highlightedIds?: Set<string>;
+  /** Colore dell'evidenziazione: ambra = manipolatore, blu = ordini dell'utente. */
+  highlightTone?: 'amber' | 'blue';
 }
+
+const HIGHLIGHT = {
+  amber: { dark: 'border-l-2 border-amber-400 bg-amber-950/30', light: 'border-l-2 border-amber-400 bg-amber-50' },
+  blue:  { dark: 'border-l-2 border-blue-400 bg-blue-950/40',   light: 'border-l-2 border-blue-500 bg-blue-50' },
+};
 
 function computeRows(orders: Order[], maxRows: number) {
   const displayed = orders.slice(0, maxRows);
@@ -19,7 +27,7 @@ function computeRows(orders: Order[], maxRows: number) {
   });
 }
 
-export default function OrderBookView({ bids, asks, isDark, onCancel }: Props) {
+export default function OrderBookView({ bids, asks, isDark, onCancel, highlightedIds, highlightTone = 'amber' }: Props) {
   const bidRows = computeRows(bids, bids.length);
   const maxBidCum = bidRows.length > 0 ? Math.max(...bidRows.map((r) => r.cumulative)) : 1;
 
@@ -34,6 +42,7 @@ export default function OrderBookView({ bids, asks, isDark, onCancel }: Props) {
   const totalAskVol = asks.reduce((s, o) => s + o.quantity, 0);
 
   const d = isDark;
+  const hlClass = d ? HIGHLIGHT[highlightTone].dark : HIGHLIGHT[highlightTone].light;
   const divider = d ? 'border-zinc-800' : 'border-zinc-200';
 
   const cols = onCancel ? 'grid-cols-[5rem_3.5rem_4rem_1rem]' : 'grid-cols-[5rem_3.5rem_4rem]';
@@ -68,13 +77,15 @@ export default function OrderBookView({ bids, asks, isDark, onCancel }: Props) {
         {askRows.map((row, i) => {
           const pct = ((row.cumulative / maxAskCum) * 100).toFixed(1);
           const isBest = i === 0;
+          const isHighlighted = highlightedIds?.has(row.id);
           return (
             <div
               key={row.id}
               className={`group relative grid ${cols} px-3 text-xs transition-colors
-                ${isBest ? (d ? 'py-1 bg-red-950/40' : 'py-1 bg-red-50') : 'py-0.75'}
+                ${isHighlighted ? hlClass : ''}
+                ${!isHighlighted && isBest ? (d ? 'py-1 bg-red-950/40' : 'py-1 bg-red-50') : 'py-0.75'}
                 ${d ? 'hover:bg-red-950/30' : 'hover:bg-red-50'}`}
-              style={!isBest ? { background: `linear-gradient(to left, ${d ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.10)'} ${pct}%, transparent ${pct}%)` } : undefined}
+              style={!isBest && !isHighlighted ? { background: `linear-gradient(to left, ${d ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.10)'} ${pct}%, transparent ${pct}%)` } : undefined}
             >
               <span className={`font-semibold tabular-nums ${isBest ? (d ? 'text-red-300' : 'text-red-700') : (d ? 'text-red-400' : 'text-red-600')}`}>
                 {isBest && <span className={`mr-1 text-[8px] font-bold ${d ? 'text-red-400' : 'text-red-500'}`}>▶</span>}
@@ -117,13 +128,15 @@ export default function OrderBookView({ bids, asks, isDark, onCancel }: Props) {
         {bidRows.map((row, i) => {
           const pct = ((row.cumulative / maxBidCum) * 100).toFixed(1);
           const isBest = i === 0;
+          const isHighlighted = highlightedIds?.has(row.id);
           return (
             <div
               key={row.id}
               className={`group relative grid ${cols} px-3 text-xs transition-colors
-                ${isBest ? (d ? 'py-1 bg-emerald-950/40' : 'py-1 bg-emerald-50') : 'py-0.75'}
+                ${isHighlighted ? hlClass : ''}
+                ${!isHighlighted && isBest ? (d ? 'py-1 bg-emerald-950/40' : 'py-1 bg-emerald-50') : 'py-0.75'}
                 ${d ? 'hover:bg-emerald-950/30' : 'hover:bg-emerald-50'}`}
-              style={!isBest ? { background: `linear-gradient(to left, ${d ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.10)'} ${pct}%, transparent ${pct}%)` } : undefined}
+              style={!isBest && !isHighlighted ? { background: `linear-gradient(to left, ${d ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.10)'} ${pct}%, transparent ${pct}%)` } : undefined}
             >
               <span className={`font-semibold tabular-nums ${isBest ? (d ? 'text-emerald-300' : 'text-emerald-700') : (d ? 'text-emerald-400' : 'text-emerald-600')}`}>
                 {isBest && <span className={`mr-1 text-[8px] font-bold ${d ? 'text-emerald-400' : 'text-emerald-500'}`}>▶</span>}
